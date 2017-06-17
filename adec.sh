@@ -167,10 +167,10 @@ function check_install {
         echo # move to a new line
         if [[ $REPLY =~ ^[Yy]$ ]]
         then
-                check_environment
-                do_install
+            check_environment
+            do_install
         else
-                exit
+            exit
         fi
     fi
 }
@@ -187,8 +187,13 @@ function main {
         exit;
     fi
 
-    # loading all output into a variable
-    readarray -t ARRLIST <<<"$LSTPACKAGES"
+    # loading all output into a variable NOT works on OSX
+    #readarray -t ARRLIST <<<"$LSTPACKAGES"
+
+    # WORKS ON OSX
+    while read -r line; do ARRLIST+=("$line"); done <<<"$LSTPACKAGES"
+
+
     read -p "List all installed packages on device? [Y/n]" -n 1 -r
     echo # move to a new line
     if [[ $REPLY =~ ^[Yy]$ ]]
