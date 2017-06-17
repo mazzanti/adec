@@ -53,7 +53,7 @@ function do_install {
     cd common
 
     echo "Installing dex2jar ..."
-    wget https://bitbucket.org/pxb1988/dex2jar/downloads/dex2jar-2.0.zip
+    curl -LOk https://bitbucket.org/pxb1988/dex2jar/downloads/dex2jar-2.0.zip
     rm -r dex2jar
     unzip -o dex2jar-2.0.zip
     mv dex2jar-2.0 dex2jar
@@ -61,12 +61,12 @@ function do_install {
     rm dex2jar-2.0.zip
 
     echo "Installing jd-gui ..."
-    wget https://github.com/java-decompiler/jd-gui/releases/download/v1.4.0/jd-gui-1.4.0.jar
+    curl -LOk https://github.com/java-decompiler/jd-gui/releases/download/v1.4.0/jd-gui-1.4.0.jar
     mkdir -p jd-gui
-    mv --force jd-gui-1.4.0.jar jd-gui/jd-gui.jar
+    mv jd-gui-1.4.0.jar jd-gui/jd-gui.jar
 
     #echo "Installing abe - Android Backup Extractor ..."
-    #wget https://downloads.sourceforge.net/project/adbextractor/android-backup-extractor-20160710-bin.zip
+    #curl -LOk https://downloads.sourceforge.net/project/adbextractor/android-backup-extractor-20160710-bin.zip
     #rm -r abe
     #unzip -o android-backup-extractor-20160710-bin.zip
     #mv android-backup-extractor-20160710-bin abe
@@ -84,7 +84,7 @@ function do_clean {
         rm -r user
     fi
     mkdir -p user
-    
+
     echo "Done."
 }
 
@@ -138,15 +138,23 @@ function check_environment {
     fi
 
     echo "Checking packages installed on machine ..."
+    IS_CURL="$(is_program_installed curl)"
     IS_JAVA="$(is_program_installed java)"
     IS_SED="$(is_program_installed sed)"
     IS_UNZIP="$(is_program_installed unzip)"
+    IS_ADB="$(is_program_installed adb)"
 
+    echo "curl     $(echo_if $IS_CURL)"
     echo "java     $(echo_if $IS_JAVA)"
     echo "sed      $(echo_if $IS_SED)"
     echo "unzip    $(echo_if $IS_UNZIP)"
+    echo "adb      $(echo_if $IS_ADB)"
 
-    if [ ! $IS_JAVA == 1 ] || [ ! $IS_SED == 1 ] || [ ! $IS_UNZIP == 1 ]; then
+    if [ ! $IS_CURL == "1" ] ||
+       [ ! $IS_JAVA == "1" ] ||
+       [ ! $IS_SED == "1" ] ||
+       [ ! $IS_UNZIP == "1" ] ||
+       [ ! $IS_ADB == "1" ]; then
         echo "Please install missing packages!"
         exit
     fi
@@ -161,6 +169,8 @@ function check_install {
         then
                 check_environment
                 do_install
+        else
+                exit
         fi
     fi
 }
@@ -170,6 +180,7 @@ function main {
     show_banner
     check_install
     do_clean
+
     echo "Getting installed app list from device ..."
     LSTPACKAGES="$(adb shell pm list packages -f)"
     if [ -z "$LSTPACKAGES" ] ; then
@@ -215,26 +226,32 @@ function main {
           fi
        done
     fi
+
     # check if not empty
     if [ -z "$TOTEST" ] ; then
         echo "ERROR: no app found!"
         exit;
     fi
+
     # get apk name
     MYAPKNAME=$(echo $TOTEST | sed $RE_APKNAME)
     # get apk path
     MYAPKPATH=$(echo $TOTEST | sed $RE_APKPATH)
+
     echo "File path: $MYAPKPATH"
     echo "File name: $MYAPKNAME"
+
     draw_line
     echo "Extracting apk from device ..."
     adb pull $MYAPKPATH
     mv *.apk user/
+
     draw_line
     echo "Extracting jar via dex2jar ..."
     sh common/dex2jar/d2j-dex2jar.sh user/*.apk
     mv *.jar user/
     echo "Done."
+
     draw_line
     read -p "Launch jd-gui? [Y/n]" -n 1 -r
     echo # move to a new line
